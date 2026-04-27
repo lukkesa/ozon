@@ -1,0 +1,786 @@
+<!DOCTYPE html>
+<html lang="cs">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Ozon O₃ — Atmosférický strážce</title>
+<link href="https://fonts.googleapis.com/css2?family=Syne:wght@400;700;800&family=DM+Sans:ital,wght@0,300;0,400;1,300&display=swap" rel="stylesheet">
+<style>
+*{margin:0;padding:0;box-sizing:border-box;}
+
+:root{
+  --ink:#0a0e1a;
+  --ink2:#111827;
+  --cyan:#00e5ff;
+  --cyan2:#00b8d4;
+  --amber:#ffaa00;
+  --red:#ff4d4d;
+  --green:#00e676;
+  --glass:rgba(255,255,255,0.04);
+  --border:rgba(0,229,255,0.15);
+  --text:#d4dce8;
+  --muted:#6b7a99;
+  --r:18px;
+}
+
+html{scroll-behavior:smooth;}
+
+body{
+  font-family:'DM Sans',sans-serif;
+  background:var(--ink);
+  color:var(--text);
+  overflow-x:hidden;
+  line-height:1.7;
+}
+
+/* ─── STARFIELD ─── */
+#stars{
+  position:fixed;top:0;left:0;width:100%;height:100%;
+  pointer-events:none;z-index:0;
+  background:radial-gradient(ellipse at 60% 0%,#0e1f3a 0%,#0a0e1a 60%);
+}
+#stars::before,#stars::after{
+  content:'';position:absolute;inset:0;
+  background-image:
+    radial-gradient(1px 1px at 10% 20%,rgba(255,255,255,.9) 0%,transparent 100%),
+    radial-gradient(1px 1px at 30% 60%,rgba(255,255,255,.7) 0%,transparent 100%),
+    radial-gradient(1px 1px at 50% 10%,rgba(255,255,255,.8) 0%,transparent 100%),
+    radial-gradient(1px 1px at 70% 40%,rgba(255,255,255,.6) 0%,transparent 100%),
+    radial-gradient(1px 1px at 85% 70%,rgba(255,255,255,.9) 0%,transparent 100%),
+    radial-gradient(1.5px 1.5px at 20% 80%,rgba(0,229,255,.6) 0%,transparent 100%),
+    radial-gradient(1.5px 1.5px at 90% 15%,rgba(0,229,255,.5) 0%,transparent 100%),
+    radial-gradient(1px 1px at 45% 55%,rgba(255,255,255,.5) 0%,transparent 100%),
+    radial-gradient(1px 1px at 62% 82%,rgba(255,255,255,.8) 0%,transparent 100%),
+    radial-gradient(1px 1px at 15% 45%,rgba(255,255,255,.6) 0%,transparent 100%);
+  background-size:100% 100%;
+}
+#stars::after{
+  background-image:
+    radial-gradient(1px 1px at 5% 90%,rgba(255,255,255,.7) 0%,transparent 100%),
+    radial-gradient(1px 1px at 25% 35%,rgba(255,255,255,.5) 0%,transparent 100%),
+    radial-gradient(1px 1px at 55% 75%,rgba(255,255,255,.8) 0%,transparent 100%),
+    radial-gradient(1px 1px at 78% 25%,rgba(255,255,255,.6) 0%,transparent 100%),
+    radial-gradient(1.5px 1.5px at 40% 5%,rgba(255,200,100,.5) 0%,transparent 100%),
+    radial-gradient(1px 1px at 92% 55%,rgba(255,255,255,.7) 0%,transparent 100%),
+    radial-gradient(1px 1px at 65% 92%,rgba(255,255,255,.5) 0%,transparent 100%);
+}
+
+/* ─── LAYOUT ─── */
+.wrap{position:relative;z-index:1;}
+.container{max-width:900px;margin:0 auto;padding:0 20px;}
+section{padding:100px 0;}
+
+/* ─── HERO ─── */
+.hero{
+  min-height:100vh;
+  display:flex;align-items:center;justify-content:center;
+  text-align:center;
+  padding:60px 20px;
+  position:relative;
+}
+.hero-inner{display:flex;flex-direction:column;align-items:center;gap:32px;}
+
+.eyebrow{
+  font-size:.75rem;letter-spacing:.25em;text-transform:uppercase;
+  color:var(--cyan);font-family:'DM Sans',sans-serif;font-weight:300;
+}
+
+h1{
+  font-family:'Syne',sans-serif;
+  font-size:clamp(3rem,12vw,7rem);
+  font-weight:800;
+  line-height:.95;
+  letter-spacing:-.02em;
+  color:#fff;
+}
+h1 span{
+  display:block;
+  background:linear-gradient(135deg,var(--cyan) 0%,#448aff 100%);
+  -webkit-background-clip:text;-webkit-text-fill-color:transparent;
+}
+
+.hero-sub{
+  max-width:500px;
+  font-size:1.1rem;
+  color:var(--muted);
+  line-height:1.6;
+  font-weight:300;
+}
+
+.scroll-hint{
+  position:absolute;bottom:40px;left:50%;transform:translateX(-50%);
+  display:flex;flex-direction:column;align-items:center;gap:8px;
+}
+.scroll-hint span{font-size:.7rem;letter-spacing:.2em;color:var(--muted);text-transform:uppercase;}
+.scroll-line{width:1px;height:60px;background:linear-gradient(to bottom,var(--cyan),transparent);animation:scrollPulse 2s ease-in-out infinite;}
+@keyframes scrollPulse{0%,100%{opacity:.3;transform:scaleY(.6) translateY(-10px);}50%{opacity:1;transform:scaleY(1) translateY(0);}}
+
+/* ─── 3D CSS MOLECULE ─── */
+.molecule-scene{
+  width:220px;height:220px;
+  perspective:600px;
+  position:relative;
+}
+.molecule{
+  width:100%;height:100%;
+  transform-style:preserve-3d;
+  animation:spin3d 12s linear infinite;
+  position:relative;
+}
+@keyframes spin3d{
+  0%{transform:rotateX(20deg) rotateY(0deg);}
+  100%{transform:rotateX(20deg) rotateY(360deg);}
+}
+
+/* Oxygen atoms */
+.atom{
+  position:absolute;
+  width:56px;height:56px;
+  border-radius:50%;
+  display:flex;align-items:center;justify-content:center;
+  font-family:'Syne',sans-serif;
+  font-size:.8rem;
+  font-weight:700;
+  color:#fff;
+  transform-style:preserve-3d;
+}
+.atom-center{
+  top:50%;left:50%;
+  transform:translate(-50%,-50%);
+  background:radial-gradient(circle at 35% 35%,#00e5ff,#0047ab);
+  box-shadow:0 0 30px rgba(0,229,255,.6),inset 0 0 15px rgba(255,255,255,.15);
+  width:70px;height:70px;font-size:.95rem;
+}
+.atom-left{
+  top:50%;left:50%;
+  width:52px;height:52px;
+  transform:translate(-130px,-50%) rotateY(0deg);
+  background:radial-gradient(circle at 35% 35%,#4fc3f7,#1565c0);
+  box-shadow:0 0 20px rgba(0,150,255,.5),inset 0 0 10px rgba(255,255,255,.1);
+}
+.atom-right{
+  top:50%;left:50%;
+  width:52px;height:52px;
+  transform:translate(76px,-50%) rotateY(0deg);
+  background:radial-gradient(circle at 35% 35%,#4fc3f7,#1565c0);
+  box-shadow:0 0 20px rgba(0,150,255,.5),inset 0 0 10px rgba(255,255,255,.1);
+}
+
+/* Bonds */
+.bond{
+  position:absolute;top:50%;left:50%;
+  height:4px;border-radius:2px;
+  transform-origin:left center;
+}
+.bond-left{
+  width:77px;
+  background:linear-gradient(90deg,rgba(0,229,255,.3),rgba(0,229,255,.9));
+  transform:translate(-120px,-50%) rotate(8deg);
+}
+.bond-right{
+  width:72px;
+  background:linear-gradient(90deg,rgba(0,229,255,.9),rgba(0,229,255,.3));
+  transform:translate(35px,-50%) rotate(-8deg);
+}
+/* Double bond lines */
+.bond-left2{
+  width:77px;height:2px;border-radius:1px;
+  background:linear-gradient(90deg,rgba(0,229,255,.2),rgba(0,229,255,.5));
+  transform:translate(-120px,-50%) rotate(8deg) translateY(6px);
+}
+.bond-right2{
+  width:72px;height:2px;border-radius:1px;
+  background:linear-gradient(90deg,rgba(0,229,255,.5),rgba(0,229,255,.2));
+  transform:translate(35px,-50%) rotate(-8deg) translateY(6px);
+}
+/* Electron shells */
+.shell{
+  position:absolute;top:50%;left:50%;
+  border-radius:50%;
+  border:1px solid rgba(0,229,255,.12);
+  transform:translate(-50%,-50%);
+  animation:shellPulse 4s ease-in-out infinite;
+}
+.shell1{width:160px;height:160px;animation-delay:0s;}
+.shell2{width:200px;height:200px;animation-delay:1.3s;border-color:rgba(0,229,255,.06);}
+@keyframes shellPulse{
+  0%,100%{opacity:.4;}50%{opacity:1;}
+}
+
+/* Electron dot */
+.electron{
+  position:absolute;width:6px;height:6px;
+  border-radius:50%;background:var(--cyan);
+  top:50%;left:50%;
+  box-shadow:0 0 6px var(--cyan);
+  animation:orbit 3s linear infinite;
+}
+@keyframes orbit{
+  0%{transform:rotate(0deg) translateX(80px) rotate(0deg);}
+  100%{transform:rotate(360deg) translateX(80px) rotate(-360deg);}
+}
+
+/* Angle label */
+.angle-badge{
+  position:absolute;bottom:20px;left:50%;transform:translateX(-50%);
+  font-size:.65rem;color:var(--cyan);opacity:.7;letter-spacing:.1em;
+  font-family:'DM Sans',sans-serif;white-space:nowrap;
+}
+
+/* ─── FORMULA BADGE ─── */
+.formula-badge{
+  display:inline-flex;align-items:center;gap:8px;
+  border:1px solid var(--border);
+  border-radius:100px;
+  padding:10px 24px;
+  background:rgba(0,229,255,.05);
+  font-family:'Syne',sans-serif;
+  font-size:1.1rem;
+  letter-spacing:.05em;
+}
+.formula-badge .dot{width:8px;height:8px;border-radius:50%;background:var(--cyan);}
+
+/* ─── SECTION TITLES ─── */
+.section-label{
+  font-size:.7rem;letter-spacing:.25em;text-transform:uppercase;
+  color:var(--cyan);margin-bottom:14px;font-weight:300;
+}
+h2{
+  font-family:'Syne',sans-serif;
+  font-size:clamp(1.8rem,5vw,2.8rem);
+  font-weight:700;
+  color:#fff;
+  line-height:1.1;
+  letter-spacing:-.02em;
+}
+h3{
+  font-family:'Syne',sans-serif;
+  font-size:1.2rem;font-weight:700;color:#fff;
+  margin-bottom:12px;
+}
+
+/* ─── DIVIDER ─── */
+.divider{
+  height:1px;
+  background:linear-gradient(90deg,transparent,var(--border),transparent);
+  margin:0;
+}
+
+/* ─── PROPERTY CARDS ─── */
+.props-grid{
+  display:grid;
+  grid-template-columns:repeat(auto-fit,minmax(160px,1fr));
+  gap:16px;
+  margin-top:48px;
+}
+.prop-card{
+  background:var(--glass);
+  border:1px solid var(--border);
+  border-radius:var(--r);
+  padding:24px 20px;
+  text-align:center;
+  transition:border-color .3s,transform .3s;
+}
+.prop-card:hover{border-color:rgba(0,229,255,.4);transform:translateY(-4px);}
+.prop-val{
+  font-family:'Syne',sans-serif;
+  font-size:1.6rem;font-weight:700;
+  color:var(--cyan);line-height:1.1;
+  margin-bottom:6px;
+}
+.prop-key{font-size:.75rem;color:var(--muted);text-transform:uppercase;letter-spacing:.1em;}
+
+/* ─── DUALITY SECTION ─── */
+.duality{
+  display:grid;
+  grid-template-columns:1fr 1fr;
+  gap:24px;
+  margin-top:60px;
+}
+.dual-card{
+  border-radius:var(--r);
+  padding:36px 28px;
+  border:1px solid;
+  transition:transform .3s;
+  position:relative;
+  overflow:hidden;
+}
+.dual-card::before{
+  content:'';position:absolute;inset:0;
+  opacity:.05;
+  transition:opacity .3s;
+}
+.dual-card:hover::before{opacity:.1;}
+.dual-card:hover{transform:translateY(-6px);}
+
+.dual-good{
+  border-color:rgba(0,230,118,.25);
+  background:rgba(0,230,118,.03);
+}
+.dual-good::before{background:var(--green);}
+.dual-good h3{color:var(--green);}
+.dual-good .tag{background:rgba(0,230,118,.1);color:var(--green);}
+
+.dual-bad{
+  border-color:rgba(255,77,77,.25);
+  background:rgba(255,77,77,.03);
+}
+.dual-bad::before{background:var(--red);}
+.dual-bad h3{color:var(--red);}
+.dual-bad .tag{background:rgba(255,77,77,.1);color:var(--red);}
+
+.dual-icon{font-size:2.2rem;margin-bottom:20px;}
+
+.tag{
+  display:inline-block;
+  font-size:.7rem;letter-spacing:.12em;text-transform:uppercase;
+  padding:4px 12px;border-radius:100px;
+  font-weight:400;margin-bottom:16px;
+}
+
+ul.feature-list{list-style:none;margin-top:16px;}
+ul.feature-list li{
+  padding:10px 0;
+  border-top:1px solid rgba(255,255,255,.06);
+  font-size:.9rem;color:var(--text);
+  display:flex;gap:12px;align-items:flex-start;
+}
+ul.feature-list li .icon{
+  flex-shrink:0;width:16px;height:16px;margin-top:3px;
+  border-radius:50%;display:flex;align-items:center;justify-content:center;
+  font-size:.6rem;
+}
+.dual-good ul.feature-list li .icon{background:rgba(0,230,118,.2);color:var(--green);}
+.dual-bad ul.feature-list li .icon{background:rgba(255,77,77,.2);color:var(--red);}
+
+/* ─── CHEMISTRY SECTION ─── */
+.chem-grid{
+  display:grid;
+  grid-template-columns:1fr 1fr;
+  gap:40px;
+  margin-top:48px;
+  align-items:start;
+}
+.chem-block{}
+.chem-formula{
+  font-family:'Syne',sans-serif;
+  font-size:1.1rem;
+  background:rgba(0,229,255,.05);
+  border:1px solid var(--border);
+  border-radius:10px;
+  padding:16px 20px;
+  margin:16px 0;
+  color:var(--cyan);
+  letter-spacing:.04em;
+  font-weight:700;
+}
+p.body{font-size:.95rem;color:var(--text);line-height:1.75;}
+
+/* ─── TIMELINE / OZONE HOLE ─── */
+.timeline{position:relative;margin-top:48px;padding-left:24px;}
+.timeline::before{
+  content:'';position:absolute;left:0;top:0;bottom:0;
+  width:1px;background:linear-gradient(to bottom,var(--cyan),transparent);
+}
+.tl-item{
+  position:relative;margin-bottom:32px;
+  padding-left:28px;
+}
+.tl-item::before{
+  content:'';
+  position:absolute;left:-4px;top:6px;
+  width:9px;height:9px;border-radius:50%;
+  background:var(--cyan);
+  box-shadow:0 0 8px var(--cyan);
+}
+.tl-year{
+  font-family:'Syne',sans-serif;
+  font-size:.8rem;font-weight:700;
+  color:var(--cyan);letter-spacing:.1em;margin-bottom:4px;
+}
+.tl-text{font-size:.9rem;color:var(--text);}
+
+/* ─── UV CHART ─── */
+.uv-bar-wrap{margin-top:32px;}
+.uv-row{display:flex;align-items:center;gap:12px;margin-bottom:12px;}
+.uv-label{width:100px;font-size:.8rem;color:var(--muted);text-align:right;flex-shrink:0;}
+.uv-bar-bg{flex:1;height:8px;border-radius:4px;background:rgba(255,255,255,.06);overflow:hidden;}
+.uv-bar{height:100%;border-radius:4px;transition:width .8s ease;}
+.uv-bar-ozone{background:linear-gradient(90deg,var(--cyan),#448aff);}
+.uv-bar-noozone{background:linear-gradient(90deg,var(--red),var(--amber));}
+.uv-pct{font-size:.8rem;color:var(--muted);width:36px;text-align:right;flex-shrink:0;}
+
+/* ─── STATS ROW ─── */
+.stats-row{
+  display:grid;grid-template-columns:repeat(3,1fr);
+  gap:20px;margin-top:48px;
+}
+.stat-item{text-align:center;}
+.stat-num{
+  font-family:'Syne',sans-serif;
+  font-size:2.2rem;font-weight:800;
+  color:#fff;line-height:1;margin-bottom:6px;
+}
+.stat-num span{color:var(--cyan);}
+.stat-desc{font-size:.8rem;color:var(--muted);}
+
+/* ─── SOURCES ─── */
+.sources-list{
+  display:grid;gap:12px;margin-top:32px;
+}
+.source-item{
+  display:flex;align-items:center;gap:16px;
+  padding:16px 20px;
+  background:var(--glass);border:1px solid var(--border);
+  border-radius:12px;
+  font-size:.9rem;
+  transition:border-color .3s;
+}
+.source-item:hover{border-color:rgba(0,229,255,.4);}
+.src-logo{
+  width:36px;height:36px;border-radius:8px;
+  display:flex;align-items:center;justify-content:center;
+  font-family:'Syne',sans-serif;font-size:.65rem;font-weight:700;
+  flex-shrink:0;letter-spacing:.05em;
+}
+.src-name{color:#fff;font-weight:400;}
+.src-title{font-size:.78rem;color:var(--muted);}
+
+/* ─── FOOTER ─── */
+footer{
+  text-align:center;padding:40px 20px 60px;
+  font-size:.8rem;color:var(--muted);border-top:1px solid rgba(255,255,255,.05);
+}
+
+/* ─── REVEAL ANIMATION ─── */
+.reveal{opacity:0;transform:translateY(40px);transition:opacity .9s ease,transform .9s ease;}
+.reveal.active{opacity:1;transform:none;}
+
+/* ─── MOBILE ─── */
+@media(max-width:640px){
+  section{padding:70px 0;}
+  h1{font-size:clamp(2.6rem,15vw,4rem);}
+  .duality{grid-template-columns:1fr;}
+  .chem-grid{grid-template-columns:1fr;}
+  .stats-row{grid-template-columns:repeat(3,1fr);gap:8px;}
+  .stat-num{font-size:1.6rem;}
+  .props-grid{grid-template-columns:repeat(2,1fr);}
+  .molecule-scene{width:180px;height:180px;}
+  .atom-center{width:54px;height:54px;font-size:.75rem;}
+  .atom-left,.atom-right{width:42px;height:42px;}
+  .atom-left{transform:translate(-104px,-50%);}
+  .atom-right{transform:translate(60px,-50%);}
+  .bond-left{width:60px;transform:translate(-97px,-50%) rotate(8deg);}
+  .bond-right{width:56px;transform:translate(28px,-50%) rotate(-8deg);}
+  .bond-left2{width:60px;transform:translate(-97px,-50%) rotate(8deg) translateY(6px);}
+  .bond-right2{width:56px;transform:translate(28px,-50%) rotate(-8deg) translateY(6px);}
+  .shell1{width:130px;height:130px;}
+  .shell2{width:165px;height:165px;}
+  .dual-card{padding:24px 20px;}
+  .uv-label{width:80px;font-size:.75rem;}
+  .props-grid{gap:10px;}
+  .prop-card{padding:18px 12px;}
+  .prop-val{font-size:1.3rem;}
+}
+</style>
+</head>
+<body>
+<div id="stars"></div>
+<div class="wrap">
+
+<!-- HERO -->
+<section class="hero">
+  <div class="hero-inner">
+    <div class="eyebrow">Atmosférická chemie</div>
+
+    <!-- 3D Molecule -->
+    <div class="molecule-scene">
+      <div class="molecule">
+        <div class="shell shell1"></div>
+        <div class="shell shell2"></div>
+        <div class="electron"></div>
+        <div class="bond bond-left"></div>
+        <div class="bond bond-right"></div>
+        <div class="bond bond-left2" style="position:absolute;top:50%;left:50%;height:2px;border-radius:1px;background:linear-gradient(90deg,rgba(0,229,255,.2),rgba(0,229,255,.5));width:77px;transform:translate(-120px,calc(-50% + 7px)) rotate(8deg);"></div>
+        <div class="bond bond-right2" style="position:absolute;top:50%;left:50%;height:2px;border-radius:1px;background:linear-gradient(90deg,rgba(0,229,255,.5),rgba(0,229,255,.2));width:72px;transform:translate(35px,calc(-50% + 7px)) rotate(-8deg);"></div>
+        <div class="atom atom-left">O</div>
+        <div class="atom atom-center">O</div>
+        <div class="atom atom-right">O</div>
+        <div class="angle-badge">∠ 116.8°</div>
+      </div>
+    </div>
+
+    <h1>Ozon<span>O₃</span></h1>
+    <p class="hero-sub">Tři atomy kyslíku. Jedna molekula s dvojí identitou — zachránce i útočník.</p>
+    <div class="formula-badge"><div class="dot"></div>Mr = 48 g/mol &nbsp;·&nbsp; triatom kyslíku<div class="dot"></div></div>
+  </div>
+  <div class="scroll-hint">
+    <span>SCROLLUJ</span>
+    <div class="scroll-line"></div>
+  </div>
+</section>
+
+<div class="divider"></div>
+
+<!-- FYZIKÁLNÍ VLASTNOSTI -->
+<section>
+  <div class="container reveal">
+    <div class="section-label">Chemie & fyzika</div>
+    <h2>Vlastnosti molekuly</h2>
+    <p style="color:var(--muted);margin-top:12px;font-size:.95rem;">O₃ vzniká fotolytickým rozpadem O₂ a spojením vzniklého atomárního kyslíku se zbývající molekulou.</p>
+
+    <div class="props-grid">
+      <div class="prop-card">
+        <div class="prop-val">48</div>
+        <div class="prop-key">g/mol (Mr)</div>
+      </div>
+      <div class="prop-card">
+        <div class="prop-val">−112°C</div>
+        <div class="prop-key">Bod varu</div>
+      </div>
+      <div class="prop-card">
+        <div class="prop-val">116.8°</div>
+        <div class="prop-key">Vazebný úhel</div>
+      </div>
+      <div class="prop-card">
+        <div class="prop-val">1.278 Å</div>
+        <div class="prop-key">Délka vazby</div>
+      </div>
+      <div class="prop-card">
+        <div class="prop-val">0.57 D</div>
+        <div class="prop-key">Dipólový moment</div>
+      </div>
+      <div class="prop-card">
+        <div class="prop-val">2.07 g/L</div>
+        <div class="prop-key">Hustota (plyn)</div>
+      </div>
+    </div>
+
+    <div style="margin-top:40px;padding:24px;background:var(--glass);border:1px solid var(--border);border-radius:var(--r);">
+      <div class="section-label" style="margin-bottom:8px;">Struktura</div>
+      <p class="body">Molekula O₃ má <strong style="color:#fff;">lomený tvar</strong> (podobně jako voda). Centrální atom kyslíku nese jeden volný elektronový pár, čímž způsobuje odchylku od lineárního uspořádání. Vazba O–O je delokalizovaná — rezonující mezi jednoduchou a dvojnou vazbou, což propůjčuje ozonu unikátní reaktivitu jako silnému oxidačnímu činidlu.</p>
+    </div>
+  </div>
+</section>
+
+<div class="divider"></div>
+
+<!-- DUALITA -->
+<section>
+  <div class="container reveal">
+    <div class="section-label">Dvojí role</div>
+    <h2>Hrdina i nepřítel</h2>
+    <p style="color:var(--muted);margin-top:12px;font-size:.95rem;">Vše závisí na výšce. Stejná molekula, radikálně odlišné dopady.</p>
+
+    <div class="duality">
+      <!-- GOOD -->
+      <div class="dual-card dual-good">
+        <div class="dual-icon">🛡</div>
+        <div class="tag">10–50 km výšky</div>
+        <h3>Stratosférický štít</h3>
+        <p class="body" style="margin-bottom:0;font-size:.9rem;">Ozonová vrstva absorbuje 97–99 % škodlivého UV-B záření, které by jinak ničilo DNA a způsobovalo rakovinu kůže, kataraktu i kolaps ekosystémů.</p>
+        <ul class="feature-list">
+          <li><div class="icon">✓</div>Blokuje UV-B záření (280–315 nm)</li>
+          <li><div class="icon">✓</div>Chrání fytoplankton a oceánské potravní řetězce</li>
+          <li><div class="icon">✓</div>Stabilizuje klimatické pásy Země</li>
+          <li><div class="icon">✓</div>Montrealský protokol (1987) zahájil obnovu vrstvy</li>
+        </ul>
+      </div>
+
+      <!-- BAD -->
+      <div class="dual-card dual-bad">
+        <div class="dual-icon">☠</div>
+        <div class="tag">0–2 km výšky</div>
+        <h3>Přízemní toxin</h3>
+        <p class="body" style="margin-bottom:0;font-size:.9rem;">Troposférický ozon vzniká fotochemickými reakcemi NOₓ a VOC při silném slunečním záření. Je hlavní složkou letního smogu a oxidantem ničícím živou tkáň.</p>
+        <ul class="feature-list">
+          <li><div class="icon">✕</div>Poškozuje plicní tkáň, astma, záněty</li>
+          <li><div class="icon">✕</div>Ničí plodiny — 10 % globální ztráty pšenice</li>
+          <li><div class="icon">✕</div>Urychluje stárnutí materiálů a pryže</li>
+          <li><div class="icon">✕</div>WHO: limit 100 µg/m³ za 8 hodin</li>
+        </ul>
+      </div>
+    </div>
+  </div>
+</section>
+
+<div class="divider"></div>
+
+<!-- CHEMIE VZNIKU -->
+<section>
+  <div class="container reveal">
+    <div class="section-label">Chemické reakce</div>
+    <h2>Jak ozon vzniká a zaniká</h2>
+
+    <div class="chem-grid">
+      <div class="chem-block">
+        <h3 style="color:var(--green);">Stratosférická tvorba</h3>
+        <div class="chem-formula">O₂ + hν → 2 O</div>
+        <div class="chem-formula">O + O₂ + M → O₃ + M</div>
+        <p class="body">UV záření rozbíjí kyslíkovou molekulu. Atomární kyslík se spojí s O₂ za přítomnosti katalyzátoru M (typicky N₂ nebo Ar). Tento Chapman cyklus udržuje ozonovou vrstvu v dynamické rovnováze.</p>
+      </div>
+      <div class="chem-block">
+        <h3 style="color:var(--red);">Troposférická tvorba (smog)</h3>
+        <div class="chem-formula">NO₂ + hν → NO + O</div>
+        <div class="chem-formula">O + O₂ → O₃</div>
+        <p class="body">Oxidy dusíku z automobilů a průmyslu reagují za přítomnosti slunečního záření. Vznikající troposférický ozon je vedlejším produktem znečištění, nikoli přirozeného cyklu.</p>
+      </div>
+      <div class="chem-block">
+        <h3 style="color:var(--amber);">Destrukce CFC (ozonová díra)</h3>
+        <div class="chem-formula">CFCl₃ + hν → CFCl₂ + Cl</div>
+        <div class="chem-formula">Cl + O₃ → ClO + O₂</div>
+        <p class="body">Každý atom chloru z freonů dokáže zničit až 100 000 molekul ozonu katalytickým cyklem. Tento mechanismus vedl k alarmujícímu rozšíření ozonové díry nad Antarktidou.</p>
+      </div>
+      <div class="chem-block">
+        <h3 style="color:var(--cyan);">Ozon jako oxidační činidlo</h3>
+        <div class="chem-formula">O₃ → O₂ + O⁻ (aq)</div>
+        <div class="chem-formula">O₃ + organika → oxidace</div>
+        <p class="body">Ozon se využívá v průmyslu jako silné dezinfekční a bělicí činidlo — čištění vody, sterilizace, bělení papíru. Jeho oxidační potenciál (+2.07 V) je třetí nejvyšší ze všech elementárních látek.</p>
+      </div>
+    </div>
+  </div>
+</section>
+
+<div class="divider"></div>
+
+<!-- UV PROTECTION VIZ -->
+<section>
+  <div class="container reveal">
+    <div class="section-label">Ochrana před UV</div>
+    <h2>Co blokuje ozonová vrstva</h2>
+    <p style="color:var(--muted);margin-top:12px;font-size:.95rem;">Propustnost UV záření při tloušťce ozonové vrstvy 300 Dobsonových jednotek vs. bez ozonu.</p>
+
+    <div class="uv-bar-wrap" style="margin-top:36px;">
+      <div style="display:flex;gap:20px;margin-bottom:24px;font-size:.8rem;color:var(--muted);">
+        <span style="display:flex;align-items:center;gap:8px;"><span style="width:20px;height:4px;border-radius:2px;background:linear-gradient(90deg,var(--cyan),#448aff);display:inline-block;"></span>S ozonem</span>
+        <span style="display:flex;align-items:center;gap:8px;"><span style="width:20px;height:4px;border-radius:2px;background:linear-gradient(90deg,var(--red),var(--amber));display:inline-block;"></span>Bez ozonu</span>
+      </div>
+
+      <div style="margin-bottom:20px;">
+        <p style="font-size:.8rem;color:var(--text);margin-bottom:12px;font-weight:500;">UV-C (100–280 nm) — nejnebezpečnější</p>
+        <div class="uv-row"><div class="uv-label">S ozonem</div><div class="uv-bar-bg"><div class="uv-bar uv-bar-ozone" style="width:1%;"></div></div><div class="uv-pct">&lt;1%</div></div>
+        <div class="uv-row"><div class="uv-label">Bez ozonu</div><div class="uv-bar-bg"><div class="uv-bar uv-bar-noozone" style="width:100%;"></div></div><div class="uv-pct">100%</div></div>
+      </div>
+      <div style="margin-bottom:20px;">
+        <p style="font-size:.8rem;color:var(--text);margin-bottom:12px;font-weight:500;">UV-B (280–315 nm) — způsobuje spálení, rakovinu</p>
+        <div class="uv-row"><div class="uv-label">S ozonem</div><div class="uv-bar-bg"><div class="uv-bar uv-bar-ozone" style="width:3%;"></div></div><div class="uv-pct">3%</div></div>
+        <div class="uv-row"><div class="uv-label">Bez ozonu</div><div class="uv-bar-bg"><div class="uv-bar uv-bar-noozone" style="width:85%;"></div></div><div class="uv-pct">85%</div></div>
+      </div>
+      <div>
+        <p style="font-size:.8rem;color:var(--text);margin-bottom:12px;font-weight:500;">UV-A (315–400 nm) — méně škodlivé, ozon neblokuje</p>
+        <div class="uv-row"><div class="uv-label">S ozonem</div><div class="uv-bar-bg"><div class="uv-bar uv-bar-ozone" style="width:95%;"></div></div><div class="uv-pct">95%</div></div>
+        <div class="uv-row"><div class="uv-label">Bez ozonu</div><div class="uv-bar-bg"><div class="uv-bar uv-bar-noozone" style="width:100%;"></div></div><div class="uv-pct">100%</div></div>
+      </div>
+    </div>
+
+    <div class="stats-row">
+      <div class="stat-item">
+        <div class="stat-num"><span>97</span>%</div>
+        <div class="stat-desc">UV-B zachyceno ozonem</div>
+      </div>
+      <div class="stat-item">
+        <div class="stat-num"><span>2</span>mil</div>
+        <div class="stat-desc">případů rakoviny kůže ročně zamezeno</div>
+      </div>
+      <div class="stat-item">
+        <div class="stat-num"><span>+0.5%</span></div>
+        <div class="stat-desc">Nárůst UV-B na každé 1% úbytku ozonu</div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<div class="divider"></div>
+
+<!-- OZONOVÁ DÍRA - TIMELINE -->
+<section>
+  <div class="container reveal">
+    <div class="section-label">Historie</div>
+    <h2>Ozonová díra & obnova</h2>
+    <p style="color:var(--muted);margin-top:12px;font-size:.95rem;">Největší ekologický úspěch v dějinách — od katastrofy k obnově.</p>
+
+    <div class="timeline">
+      <div class="tl-item">
+        <div class="tl-year">1913</div>
+        <div class="tl-text">Charles Fabry a Henri Buisson objeví ozonovou vrstvu měřením UV absorpce atmosféry.</div>
+      </div>
+      <div class="tl-item">
+        <div class="tl-year">1970</div>
+        <div class="tl-text">Paul Crutzen popisuje přirozené katalytické cykly ničení ozonu dusíkovými oxidy — základ pro pochopení zranitelnosti vrstvy.</div>
+      </div>
+      <div class="tl-item">
+        <div class="tl-year">1974</div>
+        <div class="tl-text">Molina a Rowland publikují přelomovou studii o destrukci ozonu chlorofluorouhlovodíky (CFC, freonové). Za tento objev získali v 1995 Nobelovu cenu.</div>
+      </div>
+      <div class="tl-item">
+        <div class="tl-year">1985</div>
+        <div class="tl-text">Britští vědci z Antarktidy hlásí šokující úbytek — ozonová díra pokrývá plochu větší než Severní Amerika. Svět reaguje alarmem.</div>
+      </div>
+      <div class="tl-item">
+        <div class="tl-year">1987</div>
+        <div class="tl-text">Montrealský protokol — 197 zemí světa se dohodne na postupném zákazu freonů. Považován za nejúspěšnější mezinárodní ekologickou smlouvu v historii.</div>
+      </div>
+      <div class="tl-item">
+        <div class="tl-year">2000–now</div>
+        <div class="tl-text">Ozonová vrstva se pomalu obnovuje. WMO (2023) předpovídá úplné obnovení nad většinou zeměpisných šířek do roku 2040, nad Antarktidou do 2066.</div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<div class="divider"></div>
+
+<!-- SOURCES -->
+<section>
+  <div class="container reveal">
+    <div class="section-label">Literatura</div>
+    <h2>Vědecké zdroje</h2>
+    <div class="sources-list" style="margin-top:32px;">
+      <div class="source-item">
+        <div class="src-logo" style="background:rgba(0,120,200,.15);color:#4fc3f7;">WMO</div>
+        <div>
+          <div class="src-name">World Meteorological Organization</div>
+          <div class="src-title">Scientific Assessment of Ozone Depletion: 2022 / 2026 Update</div>
+        </div>
+      </div>
+      <div class="source-item">
+        <div class="src-logo" style="background:rgba(0,180,80,.12);color:#69f0ae;">WHO</div>
+        <div>
+          <div class="src-name">World Health Organization</div>
+          <div class="src-title">Air Quality Guidelines — Ground-level Ozone (O₃)</div>
+        </div>
+      </div>
+      <div class="source-item">
+        <div class="src-logo" style="background:rgba(255,120,0,.12);color:#ffb74d;">NASA</div>
+        <div>
+          <div class="src-name">NASA Earth Observatory</div>
+          <div class="src-title">Ozone Watch — Real-time monitoring of the ozone layer</div>
+        </div>
+      </div>
+      <div class="source-item">
+        <div class="src-logo" style="background:rgba(200,50,50,.12);color:#ef9a9a;">UNEP</div>
+        <div>
+          <div class="src-name">United Nations Environment Programme</div>
+          <div class="src-title">Montreal Protocol — Healing the Ozone Layer, 2023</div>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<footer>
+  © 2026 MIRLUK
+</footer>
+
+</div>
+
+<script>
+const observer = new IntersectionObserver(entries => {
+  entries.forEach(e => { if(e.isIntersecting) e.target.classList.add('active'); });
+}, {threshold:0.1});
+document.querySelectorAll('.reveal').forEach(el => observer.observe(el));
+</script>
+<span>
+</body>
+</html>
+//JO TOTO JE VIBECODE XDD
